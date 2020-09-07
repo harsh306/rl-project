@@ -10,6 +10,7 @@ RL project at WPI for ML (CS 539) class by Prof. Kyumin Lee
 ## Experiments
 
 
+
 ## About the team 
 #### Harsh Nilesh Pathak [[Bio]](https://sites.google.com/view/harshnpathak/research)
 
@@ -31,5 +32,9 @@ Please add  2-3 lines about yourself
 ### Member Name 5
 Please add  2-3 lines about yourself
 
+## Extras
+- How to use Github and usual flow, please read this [Link](https://guides.github.com/introduction/git-handbook/)
+- Github Setup [Link](https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup)
+- Prefer using Pycharm Community for Free [Link](https://www.jetbrains.com/pycharm/download/)   
 
 
