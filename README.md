@@ -18,9 +18,9 @@ Currently, I am Data Scientist at Expedia and also a Ph.D. student at WPI. I am 
 I have worked on a diverse set of applications of computer vision for example, GANs, Image classification, compression and object detection. Also, in NLP I have done industry projects of one plus year length. 
 These include Text classification, Named Entity Recognition, Text similarity and Learning to rank frameworks. 
 
-### Member Name 2
-
-Please add 2-3 lines about yourself
+### Yichuan Li
+Yichuan Li is a Ph.D. student at Worcester Polytechnic Institue, now he is affiliated with Infolabs under the supervision of Prof. Kyumn Lee. 
+Research interests: Data Mining, Machine Learning, Social Computing. 
 
 ### Member Name 3
 
