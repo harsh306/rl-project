@@ -9,11 +9,11 @@ Our research is inspired by these two papers.
  
 Progressive GANs [Link](https://arxiv.org/abs/1710.10196)
 
-![Progressive GANs](https://github.com/harsh306/rl-project/tree/master/prj_images/progan.png?raw=true)
+![Progressive GANs](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/progan.png)
 
 Teacher Student Curriculum Learning [Link](https://arxiv.org/pdf/1707.00183.pdf)
 
-![TSCL](https://github.com/harsh306/rl-project/tree/master/prj_images/tscl.png?raw=true)
+![TSCL](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/tscl.png)
  
 
 ### Experiments
