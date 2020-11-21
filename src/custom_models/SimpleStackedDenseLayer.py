@@ -9,7 +9,6 @@ import tensorflow as tf
 class SimpleStackedDenseModel(tf.keras.Model):
     def __init__(self, input_dim, output_dim, activation, initializer, batch_size):
         super(SimpleStackedDenseModel, self).__init__()
-
         self.initializer = initializer
         self.activation = activation
         self.input_dim = input_dim
