@@ -1,4 +1,4 @@
-## The rl-project
+### The rl-project [Video](https://www.youtube.com/watch?v=O2swIIuimZA)
 RL project at WPI for ML (CS 539) class by Prof. Kyumin Lee
 
 ### Project Idea/Proposal [Link](https://github.com/harsh306/rl-project/tree/master/prj_images/docs)
