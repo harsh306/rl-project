@@ -64,17 +64,18 @@ class BatchedTrainer(object):
                 # step environment and log data
                 observations.append(observation)
                 preds.append(pred)
-                observation, reward, terminal, info = env.step(gym_action[0])
+                step = np.array([gym_action[0]])
+                observation, reward, terminal, _ = env.step(step)
                 rewards.append(reward)
                 terminals.append(terminal)
 
                 # record environment diagnostics from info
-                for key, val in info.items():
-                    try:
-                        val = float(val)
-                        infos[key].append(val)
-                    except (TypeError, ValueError):
-                        pass
+                # for key, val in info.items():
+                #     try:
+                #         val = float(val)
+                #         infos[key].append(val)
+                #     except (TypeError, ValueError):
+                #         pass
 
                 episode_reward += reward
                 episode_length += 1

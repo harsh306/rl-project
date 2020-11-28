@@ -154,7 +154,8 @@ class MLPPolicy(Policy):
         assert len(observations) == self.batch_size
 
         # create inputs for batch with one timestep
-        x = np.array(observations)[:, np.newaxis]  # add time axis
+        # x = np.array(observations)[:, np.newaxis]  # add time axis
+        x = np.array(observations)
         A = np.zeros((self.batch_size, 1))  # dummy advantage
         a = np.zeros((self.batch_size, 1, self.action_dim))  # dummy action
         R = np.zeros((self.batch_size, 1, 1))  # dummy return
@@ -229,6 +230,8 @@ class MLPPolicy(Policy):
 
         # form training data from observations, actions and returns
         x = np.array(observations)
+        if len(x.shape) > 5:
+            x = x.squeeze(0)
         a = np.array(actions)[:, :-1]
         R = np.array(returns)[:, :, np.newaxis]
         A = np.array(advantages)

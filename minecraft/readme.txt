@@ -81,9 +81,9 @@ sudo apt-get install python3-pip -y
 pip3 install opencv-contrib-python
 pip3 install gym
 pip3 install pygame
-pip3 install git+https://github.com/tambetm/minecraft-py35-ubuntu1604.git
+# pip3 install git+https://github.com/tambetm/minecraft-py35-ubuntu1604.git
 # alternatively: pip3 install git+https://github.com/tambetm/minecraft-py.git
-pip3 install git+https://github.com/tambetm/gym-minecraft
+# pip3 install git+https://github.com/tambetm/gym-minecraft
 pip3 install tensorflow-gpu
 pip3 install keras
 pip3 install h5py

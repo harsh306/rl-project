@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_allocator', action='store_true', default=False)
     parser.add_argument('--allocator_placement', choices=['public', 'private', 'pod'], default='pod')
     # model
-    parser.add_argument('--policy', choices=['cnn', 'rnn', 'depth'], default='depth')
+    parser.add_argument('--policy', choices=['cnn', 'rnn', 'depth'], default='cnn')
     parser.add_argument('--cnn_architecture', choices=['deepmind', 'openai', 'homogeneous'], default='openai')
     parser.add_argument('--cnn_layers', type=int, default=4)
     parser.add_argument('--cnn_filters', type=int, default=32)
@@ -96,7 +96,9 @@ if __name__ == '__main__':
     parser.add_argument('--load_mission', '-m', nargs='*', default=['missions/basic7x7.xml'])
     parser.add_argument('--host', default="127.0.0.1")
     parser.add_argument('--start_port', '-p', type=int, default=10001)
-    parser.add_argument("--environment", "-e", default="MinecraftBasic-v0")
+    parser.add_argument('--num_levels', '-level', type=int, default=1)
+    parser.add_argument('--random_seed', '-seed', type=int, default=123)
+    parser.add_argument("--environment", "-e", default="coinrun-v0")
 
     subparsers = parser.add_subparsers(dest='command')
     train_parser = subparsers.add_parser('train')

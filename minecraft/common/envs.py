@@ -11,6 +11,9 @@ from gym.wrappers import Monitor
 import time
 import uuid
 import getpass
+from coinrun import setup_utils, make
+import coinrun.main_utils as utils
+from coinrun.config import Config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARN)
@@ -25,6 +28,10 @@ def create_env(env_id, client_id=0, monitor_logdir=None, n=1, **kwargs):
         return create_minecraft_env(env_id, client_id, monitor_logdir, **kwargs)
     elif 'NoFrameskip' in env_id:
         return create_atari_env(env_id, monitor_logdir, **kwargs)
+    elif "coinrun" in env_id:
+        num_levels = kwargs['num_levels']
+        random_seed = kwargs['random_seed']
+        return create_coinrun_env(num_levels, random_seed)
     else:
         return create_other_env(env_id, monitor_logdir, **kwargs)
 
@@ -62,6 +69,12 @@ def create_minecraft_env(env_id, id=0, monitor_logdir=None, load_mission=None, a
     if num_buffer_frames > 0 and policy == 'cnn':
         env = ObservationBuffer(env, num_buffer_frames)
 
+    return env
+
+
+def create_coinrun_env(num_levels, random_seed):
+    setup_utils.setup_and_load(use_cmd_line_args=False, is_high_res=True, num_levels=num_levels, set_seed=random_seed)
+    env = make('standard', num_envs=1)
     return env
 
 

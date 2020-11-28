@@ -14,9 +14,9 @@ class RunningMeanStd(Layer):
         shape = input_shape[2:]
 
         # accumulators
-        self._mean = self.add_weight('mean', shape, initializer=initializers.Zeros(), trainable=False)
-        self._var = self.add_weight('var', shape, initializer=initializers.Ones(), trainable=False)
-        self._count = self.add_weight('count', (1,), initializer=initializers.Zeros(), trainable=False)
+        self._mean = self.add_weight(name='mean', shape=shape, initializer=initializers.Zeros(), trainable=False)
+        self._var = self.add_weight(name='var', shape=shape, initializer=initializers.Ones(), trainable=False)
+        self._count = self.add_weight(name='count', shape=(1,), initializer=initializers.Zeros(), trainable=False)
         self._std = K.sqrt(self._var)
         
         super(RunningMeanStd, self).build(input_shape)
@@ -147,7 +147,7 @@ class SampleGaussian(Layer):
         shape = input_shape[-1:]
         def my_init(shape, dtype=None):
             return K.zeros(shape, dtype=dtype) + K.log(self.initial_std)
-        self._logstd = self.add_weight('logstd', shape, initializer=my_init, trainable=True)
+        self._logstd = self.add_weight(name='logstd', shape=shape, initializer=my_init, trainable=True)
         super(SampleGaussian, self).build(input_shape)
 
     def call(self, x, mask=None):
