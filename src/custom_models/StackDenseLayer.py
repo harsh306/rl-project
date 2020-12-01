@@ -51,6 +51,6 @@ class StackDenseModel(tf.keras.Model):
 
 
 if __name__ == '__main__':
-    new_model = StackDenseModel(10, 2, 'relu', None, 32)
+    new_model = StackDenseModel(2, 3, 'relu', None, 32)
     new_model.build(input_shape=(32, 10))
     print(new_model.model().summary())
