@@ -43,8 +43,8 @@ class StackDenseModel(tf.keras.Model):
         x_ = tf.keras.Input(shape=(self.batch_size, self.input_dim))
         return tf.keras.Model(inputs=[x_], outputs=self.call(x_))
 
-    def call(self, x):
-        y = x
+    def call(self, inputs, training=None, mask=None):
+        y = inputs
         for h in self.stack_layers:
             y = h(y)
         return y
