@@ -14,6 +14,13 @@ from common.math_utils import explained_variance
 
 from policies import Policy
 
+class BundleLayer(Policy):
+    # x is the hidden input from the model, residual connection between the previous element
+    def build_hidden_layers(self, x):
+        # create recurrent layers
+        h = self.build_rnn_layers(x)
+        # let the main code generate fully connected layers
+        return super(BundleLayer, self).build_hidden_layers(h)
 
 class MLPPolicy(Policy):
     def __init__(self, observation_space, action_space, batch_size, stochastic, args):
@@ -154,8 +161,7 @@ class MLPPolicy(Policy):
         assert len(observations) == self.batch_size
 
         # create inputs for batch with one timestep
-        # x = np.array(observations)[:, np.newaxis]  # add time axis
-        x = np.array(observations)
+        x = np.array(observations)[:, np.newaxis]  # add time axis
         A = np.zeros((self.batch_size, 1))  # dummy advantage
         a = np.zeros((self.batch_size, 1, self.action_dim))  # dummy action
         R = np.zeros((self.batch_size, 1, 1))  # dummy return
@@ -223,15 +229,13 @@ class MLPPolicy(Policy):
         r = np.array(rewards)
         t = np.array(terminals)
 
-        #print(v.shape, r.shape, t.shape)
+        # print(v.shape, r.shape, t.shape)
 
         # calculate discounted returns
         returns, advantages = self.discount(r, t, v)
 
         # form training data from observations, actions and returns
         x = np.array(observations)
-        if len(x.shape) > 5:
-            x = x.squeeze(0)
         a = np.array(actions)[:, :-1]
         R = np.array(returns)[:, :, np.newaxis]
         A = np.array(advantages)

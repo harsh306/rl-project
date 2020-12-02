@@ -63,13 +63,13 @@ if __name__ == '__main__':
     parser.add_argument('--num_local_steps', type=int, default=50)
     parser.add_argument('--adapt_kl', type=float, default=0.002)
     # parallelization
-    parser.add_argument('--trainer', choices=['batched', 'batched_profiler', 'mix', 'dynamic'], default='batched')
+    parser.add_argument('--trainer', choices=['batched', 'batched_profiler', 'mix', 'dynamic'], default='dynamic')
     parser.add_argument('--num_runners', type=int, default=2)
     parser.add_argument('--queue_length', type=int, default=2)
     parser.add_argument('--queue_timeout', type=float, default=None)
     parser.add_argument('--runner_gpu', default=None)
     # how long
-    parser.add_argument('--num_timesteps', type=int, default=100000)
+    parser.add_argument('--num_timesteps', type=int, default=10000)
     parser.add_argument('--stats_interval', type=int, default=10000)
     parser.add_argument('--save_interval', type=int, default=100000)
     parser.add_argument('--num_eval_steps', type=int, default=5000)
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     parser.add_argument('--load_mission', '-m', nargs='*', default=['missions/basic7x7.xml'])
     parser.add_argument('--host', default="127.0.0.1")
     parser.add_argument('--start_port', '-p', type=int, default=10001)
-    parser.add_argument('--num_levels', '-level', type=int, default=1)
+    parser.add_argument('--num_levels', '-level', type=int, default=10)
     parser.add_argument('--random_seed', '-seed', type=int, default=123)
     parser.add_argument("--environment", "-e", default="coinrun-v0")
 

@@ -24,16 +24,11 @@ logger.setLevel(logging.WARN)
 
 def create_env(env_id, client_id=0, monitor_logdir=None, n=1, **kwargs):
 
-    if 'Minecraft' in env_id:
-        return create_minecraft_env(env_id, client_id, monitor_logdir, **kwargs)
-    elif 'NoFrameskip' in env_id:
-        return create_atari_env(env_id, monitor_logdir, **kwargs)
-    elif "coinrun" in env_id:
-        num_levels = kwargs['num_levels']
-        random_seed = kwargs['random_seed']
-        return create_coinrun_env(num_levels, random_seed)
-    else:
-        return create_other_env(env_id, monitor_logdir, **kwargs)
+    num_levels = kwargs['num_levels']
+    random_seed = kwargs['random_seed']
+    return create_coinrun_env(num_levels, random_seed)
+
+
 
 
 def create_minecraft_env(env_id, id=0, monitor_logdir=None, load_mission=None, allowed_actions=['move', 'turn'], action_space='discrete',
@@ -73,6 +68,7 @@ def create_minecraft_env(env_id, id=0, monitor_logdir=None, load_mission=None, a
 
 
 def create_coinrun_env(num_levels, random_seed):
+    # setup_utils.setup_and_load(use_cmd_line_args=False, is_high_res=True, num_levels=num_levels, set_seed=seed)
     setup_utils.setup_and_load(use_cmd_line_args=False, is_high_res=True, num_levels=num_levels, set_seed=random_seed)
     env = make('standard', num_envs=1)
     return env
