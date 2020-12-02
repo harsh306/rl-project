@@ -1,15 +1,8 @@
-import random
-
-from keras.layers import TimeDistributed, Dense, RepeatVector, recurrent, Input
-from keras.models import Model
-from keras.optimizers import Adam
-from keras.callbacks import TensorBoard
-import keras.backend as K
 
 import numpy as np
+from keras.callbacks import TensorBoard
 
-from .tensorboard_utils import add_summary
-from .pacman_agent import PacmanEnv, Blob, PacmanPlayer
+from .pacman_agent import PacmanEnv, PacmanPlayer
 
 
 class PacmanModel(PacmanPlayer):
@@ -33,7 +26,13 @@ class PacmanModel(PacmanPlayer):
     #     self.model = 1 #Save the neural network in self.model
 
     def generate_data(self, dist, size):
-    # Generates a problem set given the distribution over subtasks
+        """
+        # Generates a problem set given the distribution over subtasks
+        :param dist:
+        :param size:
+        :return:
+        """
+
         problem_set = []
         while len(problem_set) <= size:
             problem_set.append(1 + np.random.choice(len(dist), p=dist))
@@ -41,8 +40,13 @@ class PacmanModel(PacmanPlayer):
         return problem_set
 
     def train_epoch(self, train_data, val_data):
-    # Takes the problem set and trains the agent over all subtasks in it.
-    # Returns rewards for training and val data
+        """
+        Takes the problem set and trains the agent over all subtasks in it.
+        Returns rewards for training and val data
+        :param train_data:
+        :param val_data:
+        :return:
+        """
         # rewards_list = np.ones(self.max_enemies) * (-np.inf)
         rewards_list = [[] for _ in range(self.max_enemies)]
         epoch_history = []
@@ -104,9 +108,14 @@ class PacmanTeacherEnvironment:
         self.epochs = 0
 
     def step(self, train_dist):
-    # This function steps the teacher i.e. it generates a problem set based on the probability distribution over num_enemies
-    # and provides this problem set to the student to train  on it.
-    # This function returns the average reward obtained for each subtask (num of enemies) based on the current problem set.
+        """
+        This function steps the teacher i.e. it generates a problem set based on the probability distribution over num_enemies
+        and provides this problem set to the student to train  on it.
+        This function returns the average reward obtained for each subtask (num of enemies) based on the current problem set.
+        :param train_dist:
+        :return:
+        """
+
         print("Training on", train_dist)
         train_data = self.model.generate_data(train_dist, self.train_size)
         reward, val_reward = self.model.train_epoch(train_data, self.val_data)
