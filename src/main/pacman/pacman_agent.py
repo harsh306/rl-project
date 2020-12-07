@@ -1,15 +1,18 @@
+import copy
 import random
+from collections import deque
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import tensorflow as tf
 from PIL import Image
-from tensorflow.keras.layers import Dense, Dropout, Conv2D, MaxPooling2D, Activation, Flatten
+from tensorflow.keras.layers import Dense, Conv2D, Activation, Flatten, BatchNormalization
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers import Nadam
+from tqdm import tqdm
 
 
-# REWARDS = [] # Temporary. Only for plotting the output
 class Blob:
     # Definitions related to each blob in the environment (walls, enemies, player, food).
     def __init__(self, *args):
@@ -40,23 +43,15 @@ class Blob:
         Gives us 9 total movement options. (0,1,2,3,4,5,6,7,8)
         '''
         if choice == 0:
-            self.move(walls, x=1, y=1)
-        elif choice == 1:
-            self.move(walls, x=-1, y=-1)
-        elif choice == 2:
-            self.move(walls, x=-1, y=1)
-        elif choice == 3:
-            self.move(walls, x=1, y=-1)
-
-        elif choice == 4:
             self.move(walls, x=1, y=0)
-        elif choice == 5:
+        elif choice == 1:
             self.move(walls, x=-1, y=0)
-
-        elif choice == 6:
+        elif choice == 2:
             self.move(walls, x=0, y=1)
-        elif choice == 7:
+        elif choice == 3:
             self.move(walls, x=0, y=-1)
+        else:
+            pass
 
     def move(self, walls, x=False, y=False):
 
@@ -85,26 +80,23 @@ class Blob:
 
 class PacmanEnv:
     # Definitions related to the environment
-    def __init__(self, model, num_enemies, MAX_ITERS = 200, epsilon = 0.9, EPS_DECAY = 0.9998, start_q_table = None,
-                 map_file='map.txt', ACTION_SPACE_SIZE=8):
+    def __init__(self, model, num_enemies, MAX_ITERS=50, start_q_table=None,
+                 map_file='map_no_walls.txt', ACTION_SPACE_SIZE=4):
         self.SIZE = 10
-        self.MODEL_NAME = '2x256'
+        self.MODEL_NAME = '2x32'
         self.ACTION_SPACE_SIZE = ACTION_SPACE_SIZE
         self.MAX_ITERS = MAX_ITERS
 
         # self.student_agent = student
         self.model = model
 
-        self.MOVE_PENALTY = 1
-        self.ENEMY_PENALTY = 100
-        self.FOOD_REWARD = 100
+        self.MOVE_PENALTY = 0.01
+        self.ENEMY_PENALTY = 1
+        self.FOOD_REWARD = 1
 
-        self.epsilon = epsilon
-        self.EPSILON_DECAY = EPS_DECAY  # Every episode will be epsilon*EPS_DECAY
-        self.MIN_EPSILON = 0.01
-        self.SHOW_EVERY = 3000  # how often to play through env visually.
+        self.SHOW_EVERY = 9000  # how often to play through env visually.
 
-        self.PLAYER_COLOR = (255, 175, 0)
+        self.PLAYER_COLOR = (255, 50, 0)
         self.FOOD_COLOR = (0, 255, 0)  # food key in dict
         self.ENEMY_COLOR = (0, 0, 255)  # enemy key in dict
         self.WALL_COLOR = (255, 255, 255)
@@ -140,8 +132,7 @@ class PacmanEnv:
             while (self.enemies[i] in self.walls) or (self.enemies[i] == self.player) or (self.enemies[i] == self.food):
                 self.enemies[i] = Blob(self.SIZE)
 
-
-    def runEpisode(self, render):  # Runs a single episode
+    def runEpisode(self, render, epsilon):  # Runs a single episode
         current_state = np.array(self.get_image())
         ep_history = []
         ep_reward = 0
@@ -149,52 +140,47 @@ class PacmanEnv:
         done = False
         while not done:
             # This part stays mostly the same, the change is to query a model for Q values
-            if np.random.random() > self.epsilon:
+            if np.random.random() > epsilon:
                 # Get action from Q table
-                action = np.argmax(self.get_qs(current_state))
+                action = np.argmax(self.get_qs(current_state))  # big change
             else:
                 # Get random action
                 action = np.random.randint(0, self.ACTION_SPACE_SIZE)
 
-            new_state, reward, done = self.step(action)
+            new_state, reward, done = self.step(action, done, current_state)
             ep_reward += reward
-            ep_history.append((current_state,action,new_state,reward,done))
+            ep_history.append((current_state, action, new_state, reward, done))
 
             if render:
                 self.render()
 
             current_state = new_state
-        if self.epsilon > self.MIN_EPSILON:
-            self.epsilon *= self.EPSILON_DECAY
-            self.epsilon = max(self.MIN_EPSILON, self.epsilon)
-        print("Episode Reward: ",ep_reward)
-        # global REWARDS
-        # REWARDS.append(ep_reward)
+
         return ep_history, ep_reward
 
     def get_qs(self, state):
-        return self.model.predict(np.array(state).reshape(-1, *state.shape) / 255)[0]
+        return self.model.predict(np.array(state).reshape(-1, *state.shape) / 255.0)[0]
 
-    def step(self, action): # Called in runEpisode, steps the environment
+    def step(self, action, done=False, current_state=None):  # Called in runEpisode, steps the environment
         self.episode_step += 1
         self.player.action(action, self.walls)
-
         reward = 0
-        new_observation = np.array(self.get_image())
+        new_observation = current_state  # np.array(self.get_image())
+
         for i in range(len(self.enemies)):
             if self.player == self.enemies[i]:
                 reward = -self.ENEMY_PENALTY
+                done = True
+
         if reward == 0:
             if self.player == self.food:
                 reward = self.FOOD_REWARD
+                done = True
             else:
                 reward = -self.MOVE_PENALTY
 
-        if reward == self.FOOD_REWARD or reward == -self.ENEMY_PENALTY or self.episode_step >= self.MAX_ITERS:
+        if self.episode_step >= self.MAX_ITERS:
             done = True
-        else:
-            done = False
-
         return new_observation, reward, done
 
     def get_image(self): # Returns an image of the game board
@@ -224,18 +210,32 @@ class PacmanEnv:
 
 class PacmanPlayer:
     # Definitions related to the student RL agent: model, update function
-    def __init__(self, update_after = 'each', OBSERVATION_SPACE_SIZE = (10, 10, 3), ACTION_SPACE_SIZE = 8,
-                 ep_number = 0, RENDER_EVERY = 10000, DISCOUNT = 0.99, BATCH_SIZE = 1000): #Update after: All = all subtasks; Each = each subtask
+    def __init__(self, update_after='each', epsilon=0.45, EPS_DECAY=0.998, OBSERVATION_SPACE_SIZE=(10, 10, 3),
+                 ACTION_SPACE_SIZE=4,
+                 ep_number=0, RENDER_EVERY=10000, DISCOUNT=0.98, BATCH_SIZE=2000):
+        #Update after: All = all subtasks; Each = each subtask
 
         self.update_after = update_after
-        self.OBSERVATION_SPACE_SIZE = (10, 10, 3)
-        self.ACTION_SPACE_SIZE = 8
-        self.ep_number = 0
-        self.RENDER_EVERY = 1000 # render every 1000 episodes
-        self.DISCOUNT = 0.99
-        self.BATCH_SIZE = 1000
+        self.OBSERVATION_SPACE_SIZE = OBSERVATION_SPACE_SIZE
+        self.ACTION_SPACE_SIZE = ACTION_SPACE_SIZE
+        self.ep_number = ep_number
+        self.RENDER_EVERY = RENDER_EVERY  # render every 1000 episodes
+        self.DISCOUNT = DISCOUNT
+        self.BATCH_SIZE = BATCH_SIZE
+        self.epsilon = epsilon
+        self.EPSILON_DECAY = EPS_DECAY
+        self.MIN_EPSILON = 0.05
+        self.logdir = "logs"
+        self.REPLAY_BUFFER_SIZE = 10 * self.BATCH_SIZE
+        self.epoch_history = deque(maxlen=self.REPLAY_BUFFER_SIZE)
+        self.REWARDS = []
+        self.MEAN_REWARDS = []
+        self.WINDOW_SIZE = 100
 
-        self.model = self.create_model()
+        # self.model = self.create_model_simple()
+        # self.target_model = self.create_model_simple()
+        self.model = tf.keras.models.load_model('model')
+        self.target_model = tf.keras.models.load_model('model')
 
         # Custom tensorboard object
         # self.tensorboard = ModifiedTensorBoard(log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time())))
@@ -243,66 +243,99 @@ class PacmanPlayer:
     def create_model(self):
         model = Sequential()
 
-        model.add(Conv2D(256, (3, 3),
+        model.add(Conv2D(16, (3, 3),
                          input_shape=self.OBSERVATION_SPACE_SIZE))  # OBSERVATION_SPACE_VALUES = (10, 10, 3) a 10x10 RGB image.
+        model.add(BatchNormalization())
         model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.2))
 
-        model.add(Conv2D(256, (3, 3)))
+        model.add(Conv2D(16, (3, 3),
+                         input_shape=self.OBSERVATION_SPACE_SIZE))  # OBSERVATION_SPACE_VALUES = (10, 10, 3) a 10x10 RGB image.
+        model.add(BatchNormalization())
         model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(0.2))
 
         model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
-        model.add(Dense(64))
+        model.add(Dense(16, activation='tanh'))
+        model.add(Dense(8, activation='linear'))
+        model.add(BatchNormalization())
 
         model.add(Dense(self.ACTION_SPACE_SIZE, activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
-        model.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=['accuracy'])
+        model.compile(loss="mse", optimizer=Nadam(lr=0.0007), metrics=['mae'])
         return model
+
+    def create_model_simple(self):
+        model = Sequential()
+
+        model.add(Conv2D(8, (3, 3),
+                         input_shape=self.OBSERVATION_SPACE_SIZE))  # OBSERVATION_SPACE_VALUES = (10, 10, 3) a 10x10 RGB image.
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+
+        model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
+        model.add(Dense(16, activation='linear'))
+        model.add(BatchNormalization())
+
+        model.add(Dense(self.ACTION_SPACE_SIZE, activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
+        model.compile(loss="mse", optimizer=Nadam(lr=0.0009), metrics=['mae'])
+        return model
+
+    def logMeanReward(self):
+        if len(self.REWARDS) >= self.WINDOW_SIZE:
+            self.MEAN_REWARDS.append(np.mean(self.REWARDS[-self.WINDOW_SIZE:]))
+            return self.MEAN_REWARDS[-1]
 
     def train_epochs(self, num_enemies, num_eps): # This function is only used when pacman_agent.py is run on its own
         rewards_list = []
         total_reward = 0
-        epoch_history = []
-        for ep in range(1, num_eps+1):
-            print("Running Episode No. ",ep)
+        # epoch_history = []
+        # for ep in range(1, num_eps+1):
+        for ep in tqdm(range(1, num_eps + 1), ascii=True, unit='episodes'):
             env = PacmanEnv(model=self.model, num_enemies=num_enemies, ACTION_SPACE_SIZE=self.ACTION_SPACE_SIZE)
 
             render = False
             if ep%self.RENDER_EVERY == 0:
                 render = True
 
-            ep_history, _ = env.runEpisode(render)
+            ep_history, ep_reward = env.runEpisode(render, self.epsilon)
+            if self.epsilon > self.MIN_EPSILON and len(self.epoch_history) > 2 * self.BATCH_SIZE:
+                self.epsilon *= self.EPSILON_DECAY
 
-            [epoch_history.append(hist) for hist in ep_history]
+            # [self.epoch_history.append(hist) for hist in ep_history]
+
+            self.epoch_history.extend(ep_history)
+            self.REWARDS.append(ep_reward)
+            print(f"Episode No. {ep}, Epsilon: {self.epsilon}, Reward: {ep_reward}, "
+                  f"Mean {np.mean(self.REWARDS)}, Last window Avg {self.logMeanReward()}")
 
             if self.update_after == 'each':
-                self.update_model(epoch_history)
+                self.update_model(self.epoch_history)
             elif self.update_after != 'all':
                 print('update_after has to be either all or each')
                 assert False
+            if ep % 50 == 0:
+                self.target_model = tf.keras.models.clone_model(self.model)
 
             # rewards_list.append(ep_reward)
             # total_reward += ep_reward
-        if self.update_after=='all':
-            self.update_model(epoch_history)
+        if self.update_after == 'all':
+            self.update_model(self.epoch_history)
+
 
     def update_model(self, epoch_history): # Updates the model given the results of an epoch
-
-        if len(epoch_history)<self.BATCH_SIZE:
-            batch = epoch_history
+        # print("============================Updating Model=================================")
+        if len(epoch_history) < 2 * self.BATCH_SIZE:
+            return
+            # batch = epoch_history
         else:
             batch = random.sample(epoch_history, self.BATCH_SIZE)
-
+            #batch = epoch_history[-self.BATCH_SIZE:]
         # Get current states from minibatch, then query NN model for Q values
-        current_states = np.array([transition[0] for transition in batch]) / 255
-        current_qs_list = self.model.predict(current_states)
+        current_states = np.array([transition[0] for transition in batch]) / 255.0
+        current_qs_list = self.target_model.predict(current_states)
 
         # Get future states from minibatch, then query NN model for Q values
         # When using target network, query it, otherwise main network should be queried
-        new_current_states = np.array([transition[2] for transition in batch]) / 255
-        future_qs_list = self.model.predict(new_current_states)
+        new_current_states = np.array([transition[2] for transition in batch]) / 255.0
+        future_qs_list = self.target_model.predict(new_current_states)
 
         X = []
         y = []
@@ -312,6 +345,10 @@ class PacmanPlayer:
 
             # If not a terminal state, get new q from future states, otherwise set it to 0
             # almost like with Q Learning, but we use just part of equation here
+            # print("Current State: ", current_state)
+            # print("New State: ", new_current_state)
+            # print("Old Q", current_qs_list[index])
+
             if not done:
                 max_future_q = np.max(future_qs_list[index])
                 new_q = reward + self.DISCOUNT * max_future_q
@@ -320,31 +357,40 @@ class PacmanPlayer:
 
             # Update Q value for given state
             current_qs = current_qs_list[index]
-            current_qs[action] = new_q
+
+            old_q = current_qs[action]
+            current_qs[action] = copy.deepcopy(new_q)
 
             # And append to our training data
             X.append(current_state)
             y.append(current_qs)
 
-        # Fit on all samples as one batch, log only on terminal state
-        self.model.fit(np.array(X) / 255, np.array(y), batch_size=len(epoch_history), verbose=0, shuffle=False,
-                       callbacks=None)  # Callbacks = None for now. When tensorboard is up, put that here.
+            # print(f"Index: {index}, Action: {action}, Reward: {reward}, Done: {done}, Old Q: {old_q}, New Q: {new_q}")
+            # print("New Q", current_qs_list[index])
 
+        # Fit on all samples as one batch, log only on terminal state
+        x_train = np.array(X) / 255.0
+        y_train = np.array(y)
+        self.model.fit(x_train, y_train, batch_size=self.BATCH_SIZE, verbose=2, shuffle=False,
+                       callbacks=None)
+
+        # print("============================/Updating Model=================================")
     def get_qs(self, state):
-        return self.model.predict(np.array(state).reshape(-1, *state.shape) / 255)[0]
+        return self.model.predict(np.array(state).reshape(-1, *state.shape) / 255.0)[0]
 
 
 
 if __name__ == "__main__":
     player = PacmanPlayer()
-    player.train_epochs(1,1000)
-    # plt.plot(REWARDS)
-
-
-
-
-
-
-
-
-
+    player.train_epochs(1, 600)
+    plt.figure(1)
+    plt.plot(player.REWARDS)
+    plt.figure(2)
+    plt.plot(player.MEAN_REWARDS)
+    plt.show()
+    player.model.save('model')
+    # run1 small
+    # run 2 big
+    # run 3 big nadam, 50, ws =100
+    # r4 500 reward
+    #
