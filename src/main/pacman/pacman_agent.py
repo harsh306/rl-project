@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from PIL import Image
-from tensorflow.keras.layers import Dense, Conv2D, Activation, Flatten, BatchNormalization
+from tensorflow.keras.layers import Dense, Conv2D, Flatten, BatchNormalization
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Nadam
 from tqdm import tqdm
@@ -80,9 +80,9 @@ class Blob:
 
 class PacmanEnv:
     # Definitions related to the environment
-    def __init__(self, model, num_enemies, MAX_ITERS=50, start_q_table=None,
+    def __init__(self, model, num_enemies, MAX_ITERS=15, start_q_table=None,
                  map_file='map_no_walls.txt', ACTION_SPACE_SIZE=4):
-        self.SIZE = 10
+        self.SIZE = 5
         self.MODEL_NAME = '2x32'
         self.ACTION_SPACE_SIZE = ACTION_SPACE_SIZE
         self.MAX_ITERS = MAX_ITERS
@@ -90,8 +90,8 @@ class PacmanEnv:
         # self.student_agent = student
         self.model = model
 
-        self.MOVE_PENALTY = 0.01
-        self.ENEMY_PENALTY = 1
+        self.MOVE_PENALTY = 0.01  # 0.2
+        self.ENEMY_PENALTY = 1  # 0.8
         self.FOOD_REWARD = 1
 
         self.SHOW_EVERY = 9000  # how often to play through env visually.
@@ -210,9 +210,9 @@ class PacmanEnv:
 
 class PacmanPlayer:
     # Definitions related to the student RL agent: model, update function
-    def __init__(self, update_after='each', epsilon=0.45, EPS_DECAY=0.998, OBSERVATION_SPACE_SIZE=(10, 10, 3),
+    def __init__(self, update_after='each', epsilon=0.85, EPS_DECAY=0.998, OBSERVATION_SPACE_SIZE=(5, 5, 3),
                  ACTION_SPACE_SIZE=4,
-                 ep_number=0, RENDER_EVERY=10000, DISCOUNT=0.98, BATCH_SIZE=2000):
+                 ep_number=0, RENDER_EVERY=200, DISCOUNT=0.50, BATCH_SIZE=500):
         #Update after: All = all subtasks; Each = each subtask
 
         self.update_after = update_after
@@ -232,10 +232,10 @@ class PacmanPlayer:
         self.MEAN_REWARDS = []
         self.WINDOW_SIZE = 100
 
-        # self.model = self.create_model_simple()
-        # self.target_model = self.create_model_simple()
-        self.model = tf.keras.models.load_model('model')
-        self.target_model = tf.keras.models.load_model('model')
+        self.model = self.create_model_simple()
+        self.target_model = self.create_model_simple()
+        # self.model = tf.keras.models.load_model('model')
+        # self.target_model = tf.keras.models.load_model('model')
 
         # Custom tensorboard object
         # self.tensorboard = ModifiedTensorBoard(log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time())))
@@ -246,12 +246,10 @@ class PacmanPlayer:
         model.add(Conv2D(16, (3, 3),
                          input_shape=self.OBSERVATION_SPACE_SIZE))  # OBSERVATION_SPACE_VALUES = (10, 10, 3) a 10x10 RGB image.
         model.add(BatchNormalization())
-        model.add(Activation('relu'))
 
         model.add(Conv2D(16, (3, 3),
                          input_shape=self.OBSERVATION_SPACE_SIZE))  # OBSERVATION_SPACE_VALUES = (10, 10, 3) a 10x10 RGB image.
         model.add(BatchNormalization())
-        model.add(Activation('relu'))
 
         model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
         model.add(Dense(16, activation='tanh'))
@@ -264,18 +262,16 @@ class PacmanPlayer:
 
     def create_model_simple(self):
         model = Sequential()
-
-        model.add(Conv2D(8, (3, 3),
+        model.add(Conv2D(4, (3, 3),
                          input_shape=self.OBSERVATION_SPACE_SIZE))  # OBSERVATION_SPACE_VALUES = (10, 10, 3) a 10x10 RGB image.
         model.add(BatchNormalization())
-        model.add(Activation('relu'))
 
         model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
-        model.add(Dense(16, activation='linear'))
+        model.add(Dense(8, activation='linear'))
         model.add(BatchNormalization())
 
         model.add(Dense(self.ACTION_SPACE_SIZE, activation='linear'))  # ACTION_SPACE_SIZE = how many choices (9)
-        model.compile(loss="mse", optimizer=Nadam(lr=0.0009), metrics=['mae'])
+        model.compile(loss="mse", optimizer=Nadam(lr=0.005), metrics=['mae'])
         return model
 
     def logMeanReward(self):
@@ -311,7 +307,7 @@ class PacmanPlayer:
             elif self.update_after != 'all':
                 print('update_after has to be either all or each')
                 assert False
-            if ep % 50 == 0:
+            if ep % 100 == 0:
                 self.target_model = tf.keras.models.clone_model(self.model)
 
             # rewards_list.append(ep_reward)
@@ -330,7 +326,7 @@ class PacmanPlayer:
             #batch = epoch_history[-self.BATCH_SIZE:]
         # Get current states from minibatch, then query NN model for Q values
         current_states = np.array([transition[0] for transition in batch]) / 255.0
-        current_qs_list = self.target_model.predict(current_states)
+        current_qs_list = self.model.predict(current_states)
 
         # Get future states from minibatch, then query NN model for Q values
         # When using target network, query it, otherwise main network should be queried
@@ -382,15 +378,13 @@ class PacmanPlayer:
 
 if __name__ == "__main__":
     player = PacmanPlayer()
-    player.train_epochs(1, 600)
+    player.train_epochs(3, 2000)
     plt.figure(1)
     plt.plot(player.REWARDS)
     plt.figure(2)
     plt.plot(player.MEAN_REWARDS)
     plt.show()
     player.model.save('model')
-    # run1 small
-    # run 2 big
-    # run 3 big nadam, 50, ws =100
-    # r4 500 reward
-    #
+    # run 1 200
+    # run 2 100
+    # run 3 400
