@@ -80,7 +80,7 @@ class Blob:
 
 class PacmanEnv:
     # Definitions related to the environment
-    def __init__(self, model, num_enemies, MAX_ITERS=9, start_q_table=None,
+    def __init__(self, model, num_enemies, MAX_ITERS=15, start_q_table=None,
                  map_file='map_no_walls.txt', ACTION_SPACE_SIZE=4):
         self.SIZE = 5
         self.MODEL_NAME = '2x32'
@@ -307,7 +307,7 @@ class PacmanPlayer:
             elif self.update_after != 'all':
                 print('update_after has to be either all or each')
                 assert False
-            if ep % 200 == 0:
+            if ep % 100 == 0:
                 self.target_model = tf.keras.models.clone_model(self.model)
 
             # rewards_list.append(ep_reward)
@@ -378,7 +378,7 @@ class PacmanPlayer:
 
 if __name__ == "__main__":
     player = PacmanPlayer()
-    player.train_epochs(1, 2000)
+    player.train_epochs(3, 2000)
     plt.figure(1)
     plt.plot(player.REWARDS)
     plt.figure(2)
