@@ -28,9 +28,22 @@ Standalone agent learning from 1, 2, and 3 enemy in 5x5 grid
 ![Three](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/3enemy.png)
 
 
-
 #### Coinrun
+The mean episode reward for TSCL:
 
+![mer]()
+
+The probability of each action:
+
+![action0]()
+
+![action1]()
+
+![action2]()
+
+![action3]()
+
+![action4]()
 
 ### About the team
 #### Harsh Nilesh Pathak [[Bio]](https://sites.google.com/view/harshnpathak/research)
