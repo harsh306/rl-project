@@ -31,19 +31,21 @@ Standalone agent learning from 1, 2, and 3 enemy in 5x5 grid
 #### Coinrun
 The mean episode reward for TSCL:
 
-![mer]()
+![mer](https://github.com/harsh306/rl-project/blob/master/prj_images/coin_run/mean_reward.svg)
 
 The probability of each action:
 
-![action0]()
+![action1](https://github.com/harsh306/rl-project/blob/master/prj_images/coin_run/actions_param1_mean.svg)
 
-![action1]()
+![action2](https://github.com/harsh306/rl-project/blob/master/prj_images/coin_run/actions_param2_mean.svg)
 
-![action2]()
+![action3](https://github.com/harsh306/rl-project/blob/master/prj_images/coin_run/actions_param3_mean.svg)
 
-![action3]()
+![action4](https://github.com/harsh306/rl-project/blob/master/prj_images/coin_run/actions_param4_mean.svg)
 
-![action4]()
+![action5](https://github.com/harsh306/rl-project/blob/master/prj_images/coin_run/actions_param5_mean.svg)
+
+![action5](https://github.com/harsh306/rl-project/blob/master/prj_images/coin_run/actions_param6_mean.svg)
 
 ### About the team
 #### Harsh Nilesh Pathak [[Bio]](https://sites.google.com/view/harshnpathak/research)
