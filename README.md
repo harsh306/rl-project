@@ -17,7 +17,19 @@ Teacher Student Curriculum Learning [Link](https://arxiv.org/pdf/1707.00183.pdf)
 
 
 ### Experiments
+#### Pacman
+Standalone agent learning from 1, 2, and 3 enemy in 5x5 grid
 
+
+![One](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/1enemy.png)
+
+![Two](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/2enemy.png)
+
+![Three](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/3enemy.png)
+
+
+
+#### Coinrun
 
 
 ### About the team
@@ -35,11 +47,11 @@ Research interests: Data Mining, Machine Learning, Social Computing.
 
 I am a Masters student in the Robotics Engineering program at Worcester Polytechnic Institute. My current research is focused on robot learning through human demonstration under the guidance of Prof. Jane Li. In the past, I have worked on system identification, motion planning and human robot interaction
 
-### Member Name 4
-Please add  2-3 lines about yourself
+### Paurvi Dixit
+Master's Student at Worcester Polytechnic Institue.
 
-### Member Name 5
-Please add  2-3 lines about yourself
+### Qihuan Aixinjueluo 
+Student at Worcester Polytechnic Institue.
 
 ## Extras
 - How to use Github and usual flow, please read this [Link](https://guides.github.com/introduction/git-handbook/)
