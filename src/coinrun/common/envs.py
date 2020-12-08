@@ -67,8 +67,12 @@ def create_minecraft_env(env_id, id=0, monitor_logdir=None, load_mission=None, a
     return env
 
 
-def create_coinrun_env(num_levels, random_seed):
+def create_coinrun_env(num_levels, task_id, random_seed_list):
     # setup_utils.setup_and_load(use_cmd_line_args=False, is_high_res=True, num_levels=num_levels, set_seed=seed)
+    try:
+        random_seed = random_seed_list[task_id]
+    except:
+        random_seed = 123
     setup_utils.setup_and_load(use_cmd_line_args=False, is_high_res=True, num_levels=num_levels, set_seed=random_seed)
     env = make('standard', num_envs=1)
     return env
