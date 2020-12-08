@@ -70,7 +70,7 @@ if __name__ == '__main__':
     parser.add_argument('--runner_gpu', default=None)
     # how long
     parser.add_argument('--num_timesteps', type=int, default=10000)
-    parser.add_argument('--stats_interval', type=int, default=10000)
+    parser.add_argument('--stats_interval', type=int, default=100)
     parser.add_argument('--save_interval', type=int, default=100000)
     parser.add_argument('--num_eval_steps', type=int, default=5000)
     # curriculum
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     parser.add_argument('--no_monitor', dest='monitor', action='store_false')
     parser.add_argument('--client_resize', action='store_true', default=False)
     parser.add_argument('--logdir', default="logs/minecraft")
-    parser.add_argument('--csv_file')
+    parser.add_argument('--csv_file',default="hello.csv")
     parser.add_argument('--load_weights')
     parser.add_argument('--weights_by_name', action='store_true', default=False)
     parser.add_argument('--load_mission', '-m', nargs='*', default=['missions/basic7x7.xml'])
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     eval_parser.add_argument('label')
     args = parser.parse_args()
 
-    from common.envs import create_env
+    from common.envs import create_coinrun_env as create_env
     from trainers.batched import BatchedTrainer, BatchedTrainerProfiler
     from trainers.batched_minecraft_mix import BatchedTrainer as BatchedTrainerMix
     from trainers.batched_minecraft_dynamic import BatchedTrainer as BatchedTrainerDynamic
@@ -138,6 +138,7 @@ if __name__ == '__main__':
 
     if args.command == 'train':
         trainer.run(args.environment, args.num_timesteps, os.path.join(args.logdir, args.label))
+        trainer.eval(args.environment, args.num_timesteps, os.path.join(args.logdir, args.label))
     elif args.command == 'eval':
         trainer.eval(args.environment, args.num_timesteps, os.path.join(args.logdir, args.label))
     else:

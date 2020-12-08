@@ -11,9 +11,99 @@ from queue import Empty
 from collections import defaultdict
 import pickle
 import numpy as np
+import random
+from common.envs import create_coinrun_env
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+class SharedCounter(object):
+    """ A synchronized shared counter.
+
+    The locking done by multiprocessing.Value ensures that only a single
+    process or thread may read or write the in-memory ctypes object. However,
+    in order to do n += 1, Python performs a read followed by a write, so a
+    second process may read the old value before the new one is written by the
+    first process. The solution is to use a multiprocessing.Lock to guarantee
+    the atomicity of the modifications to Value.
+
+    This class comes almost entirely from Eli Bendersky's blog:
+    http://eli.thegreenplace.net/2012/01/04/shared-counter-with-pythons-multiprocessing/
+
+    """
+
+    def __init__(self, n = 0):
+        self.count = multiprocessing.Value('i', n)
+
+    def increment(self, n = 1):
+        """ Increment the counter by n (default = 1) """
+        with self.count.get_lock():
+            self.count.value += n
+
+    @property
+    def value(self):
+        """ Return the value of the counter """
+        return self.count.value
+
+class Queue(object):
+    """ A portable implementation of multiprocessing.Queue.
+
+    Because of multithreading / multiprocessing semantics, Queue.qsize() may
+    raise the NotImplementedError exception on Unix platforms like Mac OS X
+    where sem_getvalue() is not implemented. This subclass addresses this
+    problem by using a synchronized shared counter (initialized to zero) and
+    increasing / decreasing its value every time the put() and get() methods
+    are called, respectively. This not only prevents NotImplementedError from
+    being raised, but also allows us to implement a reliable version of both
+    qsize() and empty().
+
+    """
+
+    def __init__(self, max_size, ctx):
+        self.size1 = 0
+        self.queue = ctx.Queue(max_size)
+
+    def put(self, *args, **kwargs):
+        self.size1 += 1
+        self.queue.put(*args, **kwargs)
+        # super(Queue, self).put(*args, **kwargs)
+
+    def get(self, *args, **kwargs):
+        self.size1 -= 1
+        return self.queue.get(*args, **kwargs)
+        # return super(Queue, self).get(*args, **kwargs)
+
+    def qsize(self):
+        """ Reliable implementation of multiprocessing.Queue.qsize() """
+        return self.size1
+
+    def empty(self):
+        """ Reliable implementation of multiprocessing.Queue.empty() """
+        return not self.qsize()
+
+
+def boltzmann_policy(Q, temperature=1.):
+    e = np.exp((Q - np.max(Q)) / temperature)
+    p = e / np.sum(e)
+    return np.random.choice(len(Q), p=p)
+
+
+def epsilon_greedy_policy(Q, epsilon=0.1):
+    if np.random.rand() > epsilon:
+        # find the best action with random tie-breaking
+        #idx = np.where(np.isclose(Q, np.max(Q)))[0]
+        #assert len(idx) > 0, str(list(Q))
+        #return np.random.choice(idx)
+        return np.argmax(Q)
+    else:
+        return np.random.randint(len(Q))
+
+
+def estimate_slope(x, y):
+    assert len(x) == len(y)
+    A = np.vstack([x, np.ones(len(x))]).T
+    c, _ = np.linalg.lstsq(A, y)[0]
+    return c
 
 
 class BatchedTrainer(object):
@@ -22,13 +112,41 @@ class BatchedTrainer(object):
         self.create_environment = create_environment
         self.create_policy = create_policy
         self.args = args
+        # generate random_seed
+        random.seed(args.random_seed)
+        self.task_ids = []
+        for _ in range(100):
+            n = random.randint(1, 1000)
+            self.task_ids.append(n)
 
-    def runner(self, env_id, shared_buffer, fifo, num_timesteps, logdir, id):
+
+
+    # def load_task(self, env, task_id, id):
+    #     #print("LOADING TASK %d" % task_id)
+    #     # load mission
+    #     env.unwrapped.load_mission_file(self.args.load_mission[task_id])
+    #     # init
+    #     env.unwrapped.init(allowContinuousMovement=self.args.allowed_actions,
+    #              continuous_discrete=(self.args.action_space == 'discrete'),
+    #              videoResolution=None if self.args.client_resize else (self.args.video_width, self.args.video_height),
+    #              videoWithDepth=self.args.video_depth,
+    #              client_pool=[(self.args.host, self.args.start_port + id)],
+    #              start_minecraft=self.args.start_minecraft,
+    #              skip_steps=self.args.skip_steps)
+
+    def load_task(self, env, task_id, id):
+        level = self.task_ids[task_id]
+        env = create_coinrun_env(1, task_id, self.task_ids)
+        return env
+
+
+
+    def runner(self, env_id, shared_buffer, fifo, slopes, num_timesteps, logdir, id):
         proc_name = multiprocessing.current_process().name
         logger.info("Runner %s started" % proc_name)
 
         # local environment for runner
-        env = self.create_environment(env_id, id, os.path.join(logdir, 'gym'), **vars(self.args))
+        env = self.create_environment(1, 0, self.task_ids)
 
         # copy of policy
         policy = self.create_policy(env.observation_space, env.action_space, batch_size=1, stochastic=True, args=self.args)
@@ -36,10 +154,17 @@ class BatchedTrainer(object):
         # record episode lengths and rewards for statistics
         episode_rewards = []
         episode_lengths = []
+        episode_tasks = []
+        episode_steps = []
         episode_reward = 0
         episode_length = 0
 
+        # initially each runner gets different task
+        task_id = id % len(slopes)
+        env = self.load_task(env, task_id, id)
+
         observation = env.reset()
+        observation = np.squeeze(observation, axis=0)
         for i in range(math.ceil(float(num_timesteps) / self.args.num_local_steps)):
             # copy weights from main network at the beginning of iteration
             # the main network's weights are only read, never modified
@@ -51,8 +176,12 @@ class BatchedTrainer(object):
             rewards = []
             terminals = []
             infos = defaultdict(list)
+            t = 0
+            terminal = False
 
-            for t in range(self.args.num_local_steps):
+            while not terminal:
+            # for t in range(self.args.num_local_steps):
+                t += 1
                 if self.args.display:
                     env.render()
 
@@ -64,10 +193,13 @@ class BatchedTrainer(object):
                 # step environment and log data
                 observations.append(observation)
                 preds.append(pred)
-                observation, reward, terminal, info = env.step(gym_action[0])
+                observation, reward, terminal, info = env.step(np.array(gym_action))
+                observation = np.squeeze(observation, axis=0)
+                reward = reward[0]
+                terminal = terminal[0]
                 rewards.append(reward)
                 terminals.append(terminal)
-
+                info = info[0]
                 # record environment diagnostics from info
                 for key, val in info.items():
                     try:
@@ -83,9 +215,21 @@ class BatchedTrainer(object):
                 if terminal:
                     episode_rewards.append(episode_reward)
                     episode_lengths.append(episode_length)
+                    episode_tasks.append(task_id)
+                    episode_steps.append(i * self.args.num_local_steps + t)
                     episode_reward = 0
                     episode_length = 0
+                    # sample task
+                    if self.args.curriculum_policy == 'e_greedy':
+                        task_id = epsilon_greedy_policy(slopes, self.args.curriculum_epsilon)
+                    elif self.args.curriculum_policy == 'softmax':
+                        task_id = boltzmann_policy(np.array(slopes), self.args.curriculum_softmax_temperature)
+                    else:
+                        assert False
+                    env = self.load_task(env, task_id, id)
                     observation = env.reset()
+                    observation = np.squeeze(observation, axis=0)
+
 
             # predict value for the next observation
             # needed for calculating n-step returns
@@ -94,25 +238,32 @@ class BatchedTrainer(object):
             pred = [p[0] for p in pred]
             preds.append(pred)
 
+            #print("RUNNER EPISODE REWARDS:", episode_rewards)
+            #print("RUNNER EPISODE TASKS:", episode_tasks)
+
             # send observations, actions, rewards and returns
             # block if fifo is full
-            fifo.put((
+            fifo.append((
                 observations,
                 preds,
                 rewards,
                 terminals,
                 episode_rewards,
                 episode_lengths,
+                episode_tasks,
+                episode_steps,
                 {key: np.mean(val) for key, val in infos.items()}
             ))
             episode_rewards = []
             episode_lengths = []
+            episode_tasks = []
+            episode_steps = []
 
         env.close()
 
         logger.info("Runner %s finished" % proc_name)
 
-    def trainer(self, policy, fifos, shared_buffer, start_timestep, num_timesteps, logdir):
+    def trainer(self, policy, fifos, shared_buffer, slopes, start_timestep, num_timesteps, logdir):
         proc_name = multiprocessing.current_process().name
         logger.info("Trainer %s started" % proc_name)
 
@@ -127,11 +278,13 @@ class BatchedTrainer(object):
         total_rewards = []
         episode_rewards = []
         episode_lengths = []
-        task_rewards = [[] for _ in range(len(self.args.load_mission))]
+        task_rewards = [[] for _ in range(len(slopes))]
+        task_steps = [[] for _ in range(len(slopes))]
+        task_scores = [[] for _ in range(len(slopes))]
         stats_start = time.time()
         stats_timesteps = 0
         stats_updates = 0
-        while timestep < num_timesteps:
+        while total_timesteps < num_timesteps:
             batch_observations = []
             batch_preds = []
             batch_rewards = []
@@ -145,13 +298,16 @@ class BatchedTrainer(object):
                 try:
                     # Queue.qsize() is not implemented on Mac, ignore as it is used only for diagnostics
                     try:
-                        queue_sizes.append(fifo.qsize())
+                        queue_sizes.append(len(fifo))
                     except NotImplementedError:
                         pass
 
                     # wait for a new trajectory and statistics
-                    observations, preds, rewards, terminals, episode_reward, episode_length, mean_info = \
-                        fifo.get(timeout=self.args.queue_timeout)
+                    observations, preds, rewards, terminals, episode_reward, episode_length, episode_tasks, episode_steps, mean_info = \
+                        fifo.pop(0)
+
+                    #print("TRAINER EPISODE REWARDS:", episode_reward)
+                    #print("TRAINER EPISODE TASKS:", episode_tasks)
 
                     # add to batch
                     batch_observations.append(observations)
@@ -164,7 +320,10 @@ class BatchedTrainer(object):
                     episode_rewards += episode_reward
                     episode_lengths += episode_length
                     batch_timesteps += len(observations)
-                    task_rewards[q % len(task_rewards)] += episode_reward
+                    for task_id, step, reward in zip(episode_tasks, episode_steps, episode_reward):
+                        task_rewards[task_id].append(reward)
+                        task_steps[task_id].append(step)
+                        task_scores[task_id].append(reward)
 
                     for key, val in mean_info.items():
                         mean_infos[key].append(val)
@@ -172,6 +331,31 @@ class BatchedTrainer(object):
                 except Empty:
                     # just ignore empty fifos, batch will be smaller
                     pass
+
+            # estimate learning curve slope for each task
+            for task_id, (scores, steps) in enumerate(zip(task_scores, task_steps)):
+                if len(scores) > 1:
+                    #print("BEFORE TASK %d scores:" % task_id, scores)
+                    #print("BEFORE TASK %d steps:" % task_id, steps)
+                    # use episodes from last curriculum_steps to estimate slope
+                    idx = np.where(np.array(steps) > (steps[-1] - self.args.curriculum_steps))[0]
+                    #print("TASK %d idx:" % task_id, idx)
+                    scores = np.array(scores)
+                    steps = np.array(steps)
+                    # if there are less then 2 episodes then add back some episodes
+                    if len(idx) == 1:
+                        # add one episode before the first
+                        idx = np.concatenate([[idx[0] - 1], idx])
+                        print("INSERTED ONE:", idx)
+                    scores = scores[idx]
+                    steps = steps[idx]
+                    #print("AFTER TASK %d scores:" % task_id, scores)
+                    #print("AFTER TASK %d steps:" % task_id, steps)
+                    slope = estimate_slope(steps, scores)
+                    if self.args.curriculum_abs:
+                        slope = np.abs(slope)
+                    print("TASK %d slope:" % task_id, slope)
+                    slopes[task_id] = slope
 
             # if any of the runners produced trajectories
             if len(batch_observations) > 0:
@@ -217,12 +401,16 @@ class BatchedTrainer(object):
                         add_summary(writer, "curriculum_rewards/task%d_reward_mean" % i, np.mean(rewards), timestep)
                         add_summary(writer, "curriculum_episodes/task%d_episodes" % i, len(rewards), timestep)
 
+                    for i, slope in enumerate(slopes):
+                        add_summary(writer, "curriculum_slopes/task%d_slope" % i, slope, timestep)
+
                     logger.info("Step %d/%d: episodes %d, mean episode reward %.2f, mean episode length %.2f, timesteps/sec %.2f." %
                         (timestep, num_timesteps, len(episode_rewards), np.mean(episode_rewards), np.mean(episode_lengths),
                             stats_timesteps / stats_time))
                     episode_rewards = []
                     episode_lengths = []
-                    task_rewards = [[] for _ in range(len(self.args.load_mission))]
+                    task_rewards = [[] for _ in range(len(slopes))]
+
                     stats_start = time.time()
                     stats_timesteps = 0
                     stats_updates = 0
@@ -270,7 +458,7 @@ class BatchedTrainer(object):
         ctx = multiprocessing.get_context('spawn')
 
         # create dummy environment to be able to create model
-        env = self.create_environment(env_id, monitor_logdir=os.path.join(logdir, 'gym'), **vars(self.args))
+        env = self.create_environment(1, 0, self.task_ids)
         logger.info("Observation space: " + str(env.observation_space))
         logger.info("Action space: " + str(env.action_space))
 
@@ -306,9 +494,12 @@ class BatchedTrainer(object):
         shared_buffer = ctx.Array('c', len(blob))
         shared_buffer.raw = blob
 
-        # number of timesteps each runner has to make
-        runner_timesteps = math.ceil((num_timesteps - start_timestep) / self.args.num_runners)
+        # shared slopes
+        slopes = ctx.Array('d', 100)
 
+        # number of timesteps each runner has to make
+        # runner_timesteps = math.ceil((num_timesteps - start_timestep) / self.args.num_runners)
+        runner_timesteps = num_timesteps
         # force runner processes to use cpu, child processes inherit environment variables
         os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -318,18 +509,19 @@ class BatchedTrainer(object):
         # create fifos and threads for all runners
         fifos = []
         for i in range(self.args.num_runners):
-            fifo = ctx.Queue(self.args.queue_length)
+            fifo = []
             fifos.append(fifo)
-            process = ctx.Process(target=self.runner, args=(env_id, shared_buffer, fifo, runner_timesteps, logdir, i))
-            process.start()
+            self.runner(env_id, shared_buffer, fifo, slopes, runner_timesteps, logdir, i)
 
-        # start trainer in main thread
-        self.trainer(policy, fifos, shared_buffer, start_timestep, num_timesteps, logdir)
+
+        # keep trainer in main process
+        self.trainer(policy, fifos, shared_buffer, slopes, start_timestep, num_timesteps, logdir)
 
         logger.info("All done")
+        print("All done")
 
     def eval(self, env_id, num_timesteps, logdir):
-        env = self.create_environment(env_id, monitor_logdir=os.path.join(logdir, 'gym'), **vars(self.args))
+        env = self.create_environment(num_levels=10, task_id=666, random_seed_list=self.task_ids)
         logger.info("Observation space: " + str(env.observation_space))
         logger.info("Action space: " + str(env.action_space))
 
@@ -358,6 +550,7 @@ class BatchedTrainer(object):
         episode_length = 0
 
         observation = env.reset()
+        observation = np.squeeze(observation, axis=0)
         for i in range(num_timesteps):
             if self.args.display:
                 env.render()
@@ -366,7 +559,10 @@ class BatchedTrainer(object):
             gym_action, _ = policy.predict([observation])
 
             # step environment and log data
-            observation, reward, terminal, info = env.step(gym_action[0])
+            observation, reward, terminal, info = env.step(np.array(gym_action))
+            observation = np.squeeze(observation, axis=0)
+            reward = reward[0]
+            terminal = terminal[0]
 
             episode_reward += reward
             episode_length += 1
@@ -378,6 +574,7 @@ class BatchedTrainer(object):
                 episode_reward = 0
                 episode_length = 0
                 observation = env.reset()
+                observation = np.squeeze(observation, axis=0)
 
         logger.info("Episodes %d, mean episode reward %.2f, mean episode length %.2f." % (len(episode_rewards), np.mean(episode_rewards), np.mean(episode_lengths)))
 
