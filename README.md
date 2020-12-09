@@ -39,13 +39,16 @@ Coinrun have multiple levels of games, and here also teacher can select what lev
 
 ### Experiments
 #### Pacman
-Standalone agent learning from 1, 2, and 3 enemy in 5x5 grid
+Standalone agent learning from 1, 2, and 3 enemy in 5x5 grid in the plots below respectively. 
 
+In y-axis there is the mean-avg reward [100-window]. x-axis is the number of episodes. 
 
 ![One](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/1enemy.png)
 
+In y-axis there is the mean-avg reward [100-window]. x-axis is the number of episodes. 
 ![Two](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/2enemy.png)
 
+In y-axis there is the mean-avg reward [100-window]. x-axis is the number of episodes. 
 ![Three](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/3enemy.png)
 
 
