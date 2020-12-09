@@ -9,11 +9,32 @@ Our research is inspired by these two papers.
 
 Progressive GANs [Link](https://arxiv.org/abs/1710.10196)
 
+Author's Abstract: We describe a new training methodology for generative adversarial networks. The key idea is to grow both the generator and discriminator progressively: starting from a low resolution, we add new layers that model increasingly fine details as training progresses. This both speeds the training up and greatly stabilizes it, allowing us to produce images of unprecedented quality, e.g., CelebA images at 1024^2. We also propose a simple way to increase the variation in generated images, and achieve a record inception score of 8.80 in unsupervised CIFAR10. 
+
 ![Progressive GANs](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/progan.png)
 
 Teacher Student Curriculum Learning [Link](https://arxiv.org/pdf/1707.00183.pdf)
 
+Author's Abstract: We propose Teacher-Student Curriculum Learning (TSCL), a framework for automatic curriculum learning, where the Student tries to learn a complex task and the Teacher automatically chooses subtasks from a given set for the Student to train on. We describe a family of Teacher algorithms that rely on the intuition that the Student should practice more those tasks on which it makes the fastest progress, i.e. where the slope of the learning curve is highest. In addition, the Teacher algorithms address the problem of forgetting by also choosing tasks where the Student's performance is getting worse. We demonstrate that TSCL matches or surpasses the results of carefully hand-crafted curricula in two tasks: addition of decimal numbers with LSTM and navigation in Minecraft.
+
 ![TSCL](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/tscl.png)
+
+
+### Curriculum startergies 
+
+We leveraged the idea from TSCL method. Teacher is a sampling method that selects the difficulty level of the given game. 
+And Student is our DQN agent (NN model),   
+#### Pacman
+
+![pacman0](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/pac0.png)
+![pacman1](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/pac1.png)
+![pacman2](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/pac2.png)
+
+#### Coinrun
+Coinrun have multiple levels of games, and here also teacher can select what level should be provided to the student agent to learn based on TSCL stratergies. 
+
+![Coinrun](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/coin_run/coirun2.png)
+
 
 
 ### Experiments
