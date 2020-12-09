@@ -12,7 +12,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Nadam
 from tqdm import tqdm
 
-
+MODEL_NAME = 'model_name'
 class Blob:
     # Definitions related to each blob in the environment (walls, enemies, player, food).
     def __init__(self, *args):
@@ -102,21 +102,21 @@ class PacmanEnv:
         self.WALL_COLOR = (255, 255, 255)
         self.episode_step = 0
 
-        with open(map_file, 'r') as f:
-            self.map = np.zeros((self.SIZE, self.SIZE), dtype=float)
-            data = f.readlines()
-
-            A_row = 0
-            for line in data:
-                list = line.strip('\n').split(' ')
-                self.map[A_row:] = list[0:self.SIZE]  #
-                A_row += 1
+        # with open(map_file, 'r') as f:
+        #     self.map = np.zeros((self.SIZE, self.SIZE), dtype=float)
+        #     data = f.readlines()
+        #
+        #     A_row = 0
+        #     for line in data:
+        #         list = line.strip('\n').split(' ')
+        #         self.map[A_row:] = list[0:self.SIZE]  #
+        #         A_row += 1
 
         self.walls = []
-        for i in range(len(self.map)):
-            for j in range(len(self.map[0])):
-                if self.map[i][j] == 1:
-                    self.walls.append(Blob(self.SIZE,i, j))
+        # for i in range(len(self.map)):
+        #     for j in range(len(self.map[0])):
+        #         if self.map[i][j] == 1:
+        #             self.walls.append(Blob(self.SIZE,i, j))
 
         self.player = Blob(self.SIZE)
         while self.player in self.walls:
@@ -379,12 +379,13 @@ class PacmanPlayer:
 if __name__ == "__main__":
     player = PacmanPlayer()
     player.train_epochs(3, 2000)
-    plt.figure(1)
-    plt.plot(player.REWARDS)
+    # plt.figure(1)
+    # plt.plot(player.REWARDS)
     plt.figure(2)
     plt.plot(player.MEAN_REWARDS)
+    plt.savefig("model_plots/"+MODEL_NAME)
     plt.show()
-    player.model.save('model')
+    player.model.save("model_logs/"+MODEL_NAME)
     # run 1 200
     # run 2 100
     # run 3 400

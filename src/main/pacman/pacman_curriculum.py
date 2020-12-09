@@ -2,7 +2,7 @@ import argparse
 import os
 
 from .pacman_model import PacmanModel, PacmanTeacherEnvironment
-from .tensorboard_utils import create_summary_writer
+from .tensorboard_utils_tf2 import create_summary_writer
 
 
 def gen_curriculum_baseline(gen_digits):

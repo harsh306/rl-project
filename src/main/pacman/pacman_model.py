@@ -1,8 +1,9 @@
 
 import numpy as np
 from keras.callbacks import TensorBoard
-
+import tensorflow as tf
 from .pacman_agent import PacmanEnv, PacmanPlayer
+from tqdm import  tqdm
 
 
 class PacmanModel(PacmanPlayer):
@@ -36,7 +37,6 @@ class PacmanModel(PacmanPlayer):
         problem_set = []
         while len(problem_set) <= size:
             problem_set.append(1 + np.random.choice(len(dist), p=dist))
-        print('Problem Set: ', problem_set)
         return problem_set
 
     def train_epoch(self, train_data, val_data):
@@ -52,16 +52,19 @@ class PacmanModel(PacmanPlayer):
         epoch_history = []
         num_eps = len(train_data)
         num_val_eps = len(val_data)
-        for ep in range(num_eps):
+        # for ep in range(num_eps):
+        for ep in tqdm(range(num_eps), ascii=True, unit='episodes'):
             print("Running Episode No. ", ep," with ",train_data[ep]," enemies")
             env = PacmanEnv(model=self.model, num_enemies=train_data[ep], ACTION_SPACE_SIZE=self.ACTION_SPACE_SIZE)
 
             render = False
-            if ep % self.RENDER_EVERY == 0:
-            # if self.render_ep == ep:
-                render = True
+            # if ep % self.RENDER_EVERY == 0:
+            # # if self.render_ep == ep:
+            #     render = True
 
-            ep_history, ep_reward = env.runEpisode(render)
+            ep_history, ep_reward = env.runEpisode(render, self.epsilon)
+            if self.epsilon > self.MIN_EPSILON and len(self.epoch_history) > 2 * self.BATCH_SIZE:
+                self.epsilon *= self.EPSILON_DECAY
 
             [epoch_history.append(hist) for hist in ep_history]
             # We save all reward obtained for a certain subtask in an epoch and later avg them
@@ -70,6 +73,8 @@ class PacmanModel(PacmanPlayer):
 
             if self.update_after == 'each':
                 self.update_model(epoch_history)
+                if ep % 100 == 0:
+                    self.target_model = tf.keras.models.clone_model(self.model)
             elif self.update_after != 'all':
                 print('update_after has to be either all or each')
                 assert False
@@ -81,16 +86,17 @@ class PacmanModel(PacmanPlayer):
         val_rewards_list = [[] for _ in range(self.max_enemies)]
         for val_ep in range(num_val_eps):
             env = PacmanEnv(model=self.model, num_enemies=val_data[val_ep], ACTION_SPACE_SIZE=self.ACTION_SPACE_SIZE)
-            _, val_reward = env.runEpisode(render=False)
+            _, val_reward = env.runEpisode(render=False, epsilon=self.epsilon)
             val_rewards_list[val_data[val_ep] - 1].append(val_reward)
-        val_rewards_list = np.mean(val_rewards_list,axis=1)
+        val_rewards_list = [np.mean(reward) for reward in val_rewards_list]
+        print(val_rewards_list)
         ################################################################################################################
 
 
         # Average all rewards
         for n, subtask_rewards in enumerate(rewards_list):
             if subtask_rewards == []:
-                rewards_list[n] = -500
+                rewards_list[n] = -100
             else:
                 rewards_list[n] = np.mean(subtask_rewards)
         print("===========================END OF EPOCH===========================================")
@@ -98,13 +104,13 @@ class PacmanModel(PacmanPlayer):
 
 
 class PacmanTeacherEnvironment:
-    def __init__(self, model, train_size, val_size, val_dist, val_threshold=None, writer=None):
+    def __init__(self, model, train_size, val_size, val_dist, val_threshold=0.5, writer=None):
         self.model = model
         self.num_subtasks = model.max_enemies
         self.train_size = train_size
         self.val_data = model.generate_data(val_dist, val_size)
         self.writer = writer
-        self.val_threshold = -100 if not val_threshold else val_threshold
+        self.val_threshold = val_threshold
         self.epochs = 0
 
     def step(self, train_dist):
@@ -118,10 +124,11 @@ class PacmanTeacherEnvironment:
 
         print("Training on", train_dist)
         train_data = self.model.generate_data(train_dist, self.train_size)
+        print('Problem Set Generated')
         reward, val_reward = self.model.train_epoch(train_data, self.val_data)
 
         train_done = False
-        val_done = all(i>0 for i in [1,2,3])
+        val_done = all(i>self.val_threshold for i in val_reward)
         self.epochs += 1
 
         # if self.writer:
@@ -131,4 +138,4 @@ class PacmanTeacherEnvironment:
         #         # add_summary(self.writer, "train_accuracies/task_%d" % (i + 1), train_accs[i], self.model.epochs)
         #         add_summary(self.writer, "valid_accuracies/task_%d" % (i + 1), val_accs[i], self.model.epochs)
 
-        return reward, train_done, val_done
+        return reward, train_done, val_reward, val_done
