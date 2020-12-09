@@ -22,8 +22,13 @@ Author's Abstract: We propose Teacher-Student Curriculum Learning (TSCL), a fram
 
 ### Curriculum startegies 
 
-We leveraged the idea from TSCL method. Teacher is a sampling method that selects the difficulty level of the given game. 
-And Student is our DQN agent (NN model),   
+We leveraged the idea from TSCL method. We list some limitations we noticed in their work. First, they assume all the tasks are in the same domain(game), which ignores the opportunity to learn from any other domains (games). 
+Second, the authors do not consider the model capacity w.r.t to the difficulty of the tasks which means the model will adjust the structure or the number of parameters of the model based on the tasks’ difficulty. 
+Third, all the experiments shown have a limited number of subtasks, we would like to see if the original hypothesis changes if there are thousands of subtasks. 
+Fourth, they have a hyperparameter for the number of steps a student should train on each sub-task, without any empirical or analytical evidence. 
+Finally, these subtasks are pre-defined by experts, however these subtasks can also be generated from a generative model i.e it can automatically generate the optimal environment for the student to learn, this will also enable the student to learn more complex tasks indefinitely.
+Our contribution is to come-up with environment ideas that can be easily scaled and programtically develop more complex tasks indefinitely. In particular we show how simple Pacman and coinrun game can be used to that very effect. 
+    
 #### Pacman
 
 ![pacman0](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/pac0.png)
@@ -38,6 +43,7 @@ Coinrun have multiple levels of games, and here also teacher can select what lev
 
 
 ### Experiments
+In our experiments, Teacher is a sampling method that selects the difficulty level of the given game. And Student is our DQN agent (NN model). 
 #### Pacman
 Standalone agent learning from 1, 2, and 3 enemy in 5x5 grid in the plots below respectively. 
 
