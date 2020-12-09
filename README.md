@@ -30,7 +30,7 @@ And Student is our DQN agent (NN model),
 ![pacman1](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/pac1.png)
 ![pacman2](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/pac2.png)
 
-#### Coinrun
+#### Coinrun [Blog](https://openai.com/blog/quantifying-generalization-in-reinforcement-learning/)
 Coinrun have multiple levels of games, and here also teacher can select what level should be provided to the student agent to learn based on TSCL stratergies. 
 
 ![Coinrun](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/coin_run/coirun2.png)
