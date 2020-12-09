@@ -33,7 +33,7 @@ And Student is our DQN agent (NN model),
 #### Coinrun [Blog](https://openai.com/blog/quantifying-generalization-in-reinforcement-learning/)
 Coinrun have multiple levels of games, and here also teacher can select what level should be provided to the student agent to learn based on TSCL stratergies. 
 
-![Coinrun](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/coin_run/coirun2.png)
+![Coinrun](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/coin_run/coinrun2.png)
 
 
 
