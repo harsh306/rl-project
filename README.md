@@ -27,7 +27,7 @@ And Student is our DQN agent (NN model),
 #### Pacman
 
 ![pacman0](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/pac0.png)
-![pacman1](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/pac1.png)
+![pacman1](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/pac3.png)
 ![pacman2](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/pac2.png)
 
 #### Coinrun [Blog](https://openai.com/blog/quantifying-generalization-in-reinforcement-learning/)
