@@ -20,7 +20,7 @@ Author's Abstract: We propose Teacher-Student Curriculum Learning (TSCL), a fram
 ![TSCL](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/tscl.png)
 
 
-### Curriculum startergies 
+### Curriculum startegies 
 
 We leveraged the idea from TSCL method. Teacher is a sampling method that selects the difficulty level of the given game. 
 And Student is our DQN agent (NN model),   
