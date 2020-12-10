@@ -1,22 +1,22 @@
-import argparse
-import csv
 import os
-
-import numpy as np
-from collections import deque, defaultdict
-import matplotlib.pyplot as plt
-from tqdm import tqdm
 import pickle
+from collections import deque
 
+import matplotlib.pyplot as plt
+import numpy as np
+from tqdm import tqdm
+
+from src.main.pacman.pacman_curriculum import gen_curriculum_baseline
 from src.main.pacman.pacman_model import PacmanModel, PacmanTeacherEnvironment
-from src.main.pacman.pacman_curriculum import gen_curriculum_baseline, gen_curriculum_naive, gen_curriculum_mixed, gen_curriculum_combined
 from src.main.pacman.tensorboard_utils_tf2 import create_summary_writer, add_summary
 
 VAL_REWARDS = [[],[],[]]
 class args:
-    def __init__(self, run_id, csv_file=None, teacher='sampling',curriculum='combined',policy='egreedy',epsilon=0.1,
-                 temperature=0.0004,bandit_lr=0.1,window_size=10,abs=False,max_timesteps=100,max_enemies=3,invert=True,
-                 hidden_size=128,batch_size=4096,train_size=500,val_size=100,optimizer_lr=0.001,clipnorm=2,logdir='pacman_logs'):
+    def __init__(self, run_id, csv_file=None, teacher='window', curriculum='combined', policy='egreedy', epsilon=0.1,
+                 temperature=0.0004, bandit_lr=0.1, window_size=10, abs=False, max_timesteps=20, max_enemies=3,
+                 invert=True,
+                 hidden_size=128, batch_size=4096, train_size=500, val_size=100, optimizer_lr=0.001, clipnorm=2,
+                 logdir='pacman_logs2'):
 
         # parser.add_argument('--teacher', choices=['naive', 'online', 'window', 'sampling'], default='sampling')
         # parser.add_argument('--curriculum', choices=['uniform', 'naive', 'mixed', 'combined'], default='combined')
@@ -276,7 +276,7 @@ class SamplingTeacher:
 
 
 if __name__ == '__main__':
-    args = args(run_id='pacman0')
+    args = args(run_id='pacman1.1')
 
     logdir = os.path.join(args.logdir, args.run_id)
     writer = create_summary_writer(logdir)
@@ -310,7 +310,7 @@ if __name__ == '__main__':
     epochs = teacher.teach(args.max_timesteps)
 
     print("Finished after", epochs, "epochs.")
-    filename = 'VAL_REWARDS/' + args.teacher + ".pkl"
+    filename = 'VAL_REWARDS_p/' + args.teacher + "_2.pkl"
     with open(filename, 'wb') as f:
         pickle.dump(VAL_REWARDS, f)
     plt.figure(1)

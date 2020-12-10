@@ -12,6 +12,8 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Nadam
 from tqdm import tqdm
 
+from src.custom_models.StackCNNDenseModel import StackCNNDenseModel
+
 MODEL_NAME = 'model_name'
 class Blob:
     # Definitions related to each blob in the environment (walls, enemies, player, food).
@@ -212,7 +214,7 @@ class PacmanPlayer:
     # Definitions related to the student RL agent: model, update function
     def __init__(self, update_after='each', epsilon=0.85, EPS_DECAY=0.998, OBSERVATION_SPACE_SIZE=(5, 5, 3),
                  ACTION_SPACE_SIZE=4,
-                 ep_number=0, RENDER_EVERY=200, DISCOUNT=0.50, BATCH_SIZE=500):
+                 ep_number=0, RENDER_EVERY=200, DISCOUNT=0.50, BATCH_SIZE=350):
         #Update after: All = all subtasks; Each = each subtask
 
         self.update_after = update_after
@@ -232,10 +234,23 @@ class PacmanPlayer:
         self.MEAN_REWARDS = []
         self.WINDOW_SIZE = 100
 
-        self.model = self.create_model_simple()
-        self.target_model = self.create_model_simple()
-        # self.model = tf.keras.models.load_model('model')
-        # self.target_model = tf.keras.models.load_model('model')
+        self.model = StackCNNDenseModel(input_dim=self.OBSERVATION_SPACE_SIZE,
+                                        output_dim=self.ACTION_SPACE_SIZE,
+                                        hidden_dim=4, num_hidden_layers=2,
+                                        activation='linear',
+                                        initializer=tf.keras.initializers.glorot_normal()
+                                        )  # self.create_model_simple() # tf.keras.models.load_model('model')
+
+        self.model.compile(loss="mse", optimizer=Nadam(lr=0.005), metrics=['mae'])
+
+        self.target_model = StackCNNDenseModel(input_dim=self.OBSERVATION_SPACE_SIZE,
+                                               output_dim=self.ACTION_SPACE_SIZE,
+                                               hidden_dim=4, num_hidden_layers=2,
+                                               activation='linear',
+                                               initializer=tf.keras.initializers.glorot_normal()
+                                               )
+        self.target_model.compile(loss="mse", optimizer=Nadam(lr=0.005), metrics=['mae'])
+
 
         # Custom tensorboard object
         # self.tensorboard = ModifiedTensorBoard(log_dir="logs/{}-{}".format(MODEL_NAME, int(time.time())))
@@ -308,7 +323,12 @@ class PacmanPlayer:
                 print('update_after has to be either all or each')
                 assert False
             if ep % 100 == 0:
-                self.target_model = tf.keras.models.clone_model(self.model)
+                self.target_model = tf.keras.models.clone_model(model=self.model.model())
+                # self.model.save('progressive_model', save_format='h5')
+                self.model.append_dense_block(5, ep)
+                self.model.build((self.BATCH_SIZE, 5, 5, 3))
+                self.model.compile(loss="mse", optimizer=Nadam(lr=0.005), metrics=['mae'])
+                print(self.model.summary())
 
             # rewards_list.append(ep_reward)
             # total_reward += ep_reward

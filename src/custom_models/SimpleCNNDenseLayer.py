@@ -7,17 +7,16 @@ import tensorflow as tf
 
 
 class SimpleCNNDenseModel(tf.keras.Model):
-    def __init__(self, input_dim, output_dim, hidden_dim, num_hidden_layers, activation, initializer, batch_size):
+    def __init__(self, input_dim, output_dim, hidden_dim, num_hidden_layers, activation, initializer):
         super(SimpleCNNDenseModel, self).__init__()
         self.initializer = initializer
         self.activation = activation
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.hidden_dim = hidden_dim
-        self.batch_size = batch_size
         self.num_hidden_layers = num_hidden_layers
         self.stack_layers = [
-            tf.keras.layers.Conv2D(filters=16,
+            tf.keras.layers.Conv2D(filters=4,
                                    kernel_size=(3, 3),
                                    input_shape=input_dim,
                                    activation=self.activation,
@@ -57,6 +56,6 @@ if __name__ == '__main__':
     hidden_dim = 5
     num_hidden_dense_layers = 3
     new_model = SimpleCNNDenseModel(input_dim, output_dim, hidden_dim,
-                                    num_hidden_dense_layers, 'relu', None, 32)
+                                    num_hidden_dense_layers, 'relu', None)
     new_model.build(input_shape=(32, 10, 10, 3))
     print(new_model.model().summary())

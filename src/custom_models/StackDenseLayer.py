@@ -37,7 +37,6 @@ class StackDenseModel(tf.keras.Model):
                                                        activation=self.activation,
                                                        kernel_initializer=self.initializer,
                                                        kernel_regularizer=None, name=f"dense_append{self.output_dim}"))
-        self.call(x)
 
     def model(self):
         x_ = tf.keras.Input(shape=self.input_dim)

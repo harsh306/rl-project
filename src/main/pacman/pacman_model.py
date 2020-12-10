@@ -1,14 +1,15 @@
 
 import numpy as np
-from keras.callbacks import TensorBoard
 import tensorflow as tf
+from tensorflow.keras.callbacks import TensorBoard
+from tqdm import tqdm
+
 from .pacman_agent import PacmanEnv, PacmanPlayer
-from tqdm import  tqdm
 
 
 class PacmanModel(PacmanPlayer):
     # Model definitions can be found in pacman_agent.py
-    def __init__(self, max_enemies=5, optimizer_lr=0.001, logdir=None):
+    def __init__(self, max_enemies=3, optimizer_lr=0.005, logdir=None):
         PacmanPlayer.__init__(self,'each')
         self.max_enemies = max_enemies
         self.render_ep = 0 # Renders 1 episode from the subtask list
@@ -73,8 +74,13 @@ class PacmanModel(PacmanPlayer):
 
             if self.update_after == 'each':
                 self.update_model(epoch_history)
-                if ep % 100 == 0:
-                    self.target_model = tf.keras.models.clone_model(self.model)
+                if ep % 300 == 0 and ep > 0:
+                    self.target_model = tf.keras.models.clone_model(self.model.model())
+                    self.model.append_dense_block(5, ep + np.random.random())
+                    self.model.build((self.BATCH_SIZE, 5, 5, 3))
+                    self.model.compile(loss="mse", optimizer=tf.keras.optimizers.Nadam(lr=0.005), metrics=['mae'])
+                    print(self.model.summary())
+
             elif self.update_after != 'all':
                 print('update_after has to be either all or each')
                 assert False

@@ -1,4 +1,4 @@
-### The rl-project [Video](https://www.youtube.com/watch?v=O2swIIuimZA)
+### The rl-project [Video](https://www.youtube.com/watch?v=O2swIIuimZA) [Final Presentation](https://www.youtube.com/watch?v=4LaJNNx4AD8)
 RL project at WPI for ML (CS 539) class by Prof. Kyumin Lee
 
 ### Project Idea/Proposal [Link](https://github.com/harsh306/rl-project/tree/master/prj_images/docs)
@@ -56,6 +56,10 @@ In y-axis there is the mean-avg reward [100-window]. x-axis is the number of epi
 
 In y-axis there is the mean-avg reward [100-window]. x-axis is the number of episodes. 
 ![Three](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/3enemy.png)
+
+Validation results 
+![pacman_res](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/Validation_Rewards_for_each_Teacher_Epoch.png)
+![pacman_progressive](https://raw.githubusercontent.com/harsh306/rl-project/master/prj_images/pacman/window_pro.png)
 
 
 #### Coinrun
